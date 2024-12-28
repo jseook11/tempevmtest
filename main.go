@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -66,8 +67,19 @@ func writeResultsToFile(result chan string, filePath string) {
 	}
 }
 
+func printStatus(startTime time.Time, counter *int32) {
+	ticker := time.NewTicker(1 * time.Minute) // Tick every minute
+	defer ticker.Stop()
+
+	for range ticker.C {
+		elapsed := time.Since(startTime)
+		addressesFound := atomic.LoadInt32(counter)
+		fmt.Printf("Running for: %v | Addresses Found: %d\n", elapsed, addressesFound)
+	}
+}
+
 func main() {
-	prefixes := []string{"0xaaaaa", "0xbbbbb", "0xccccc", "0xddddd", "0xeeeee", "0x00000", "0x11111", "0x22222", "0x33333", "0x44444", "0x55555", "0x66666", "0x77777", "0x88888", "0x99999"}
+	prefixes := []string{"0xaaaaa", "0xbbbbb", "0xccccc", "0xddddd", "0xeeeee", "0xfffff", "0x00000", "0x11111", "0x22222", "0x33333", "0x44444", "0x55555", "0x66666", "0x77777", "0x88888", "0x99999"}
 	suffixes := []string{"aaaaa", "bbbbb", "ccccc", "ddddd", "eeeee", "fffff", "00000", "11111", "22222", "33333", "44444", "55555", "66666", "77777", "88888", "99999"} // No specific suffixes
 	workerCount := 8                                                                                                                                                     // Adjust based on CPU cores
 	result := make(chan string, workerCount)
@@ -76,6 +88,9 @@ func main() {
 
 	var counter int32
 	limit := int32(100) // Stop after finding 100 addresses
+
+	// Capture start time
+	startTime := time.Now()
 
 	// Launch workers
 	var wg sync.WaitGroup
@@ -86,6 +101,9 @@ func main() {
 			findMatchingAddress(prefixes, suffixes, result, &counter, limit, stopChan)
 		}()
 	}
+
+	// Start the status ticker in a separate goroutine
+	go printStatus(startTime, &counter)
 
 	// Write results to file
 	go func() {
