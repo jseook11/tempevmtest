@@ -23,13 +23,17 @@ func generatePrivateKey() string {
 	return hex.EncodeToString(bytes)
 }
 
-func findMatchingAddress(prefixes, suffixes []string, result chan string, counter *int32, limit int32, stopChan chan struct{}) {
+func findMatchingAddress(prefixes, suffixes []string, result chan string, counter *int32, generatedCounter *int32, limit int32, stopChan chan struct{}) {
 	for {
 		select {
 		case <-stopChan:
 			return
 		default:
 			privateKeyHex := generatePrivateKey()
+
+			// Increment the generated address counter
+			atomic.AddInt32(generatedCounter, 1)
+
 			privateKey, err := crypto.HexToECDSA(privateKeyHex)
 			if err != nil {
 				log.Fatal(err)
@@ -37,9 +41,11 @@ func findMatchingAddress(prefixes, suffixes []string, result chan string, counte
 
 			address := crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
 
+			// Check for matching address
 			for _, prefix := range prefixes {
 				for _, suffix := range suffixes {
 					if strings.HasPrefix(strings.ToLower(address), prefix) && strings.HasSuffix(strings.ToLower(address), suffix) {
+						// Increment the found address counter
 						if atomic.AddInt32(counter, 1) > limit {
 							return
 						}
@@ -67,19 +73,20 @@ func writeResultsToFile(result chan string, filePath string) {
 	}
 }
 
-func printStatus(startTime time.Time, counter *int32) {
+func printStatus(startTime time.Time, counter *int32, generatedCounter *int32) {
 	ticker := time.NewTicker(1 * time.Minute) // Tick every minute
 	defer ticker.Stop()
 
 	for range ticker.C {
 		elapsed := time.Since(startTime)
 		addressesFound := atomic.LoadInt32(counter)
-		fmt.Printf("Running for: %v | Addresses Found: %d\n", elapsed, addressesFound)
+		addressesGenerated := atomic.LoadInt32(generatedCounter)
+		fmt.Printf("Running for: %v | Addresses Generated: %d | Addresses Found: %d\n", elapsed, addressesGenerated, addressesFound)
 	}
 }
 
 func main() {
-	prefixes := []string{"0xaaaaa", "0xbbbbb", "0xccccc", "0xddddd", "0xeeeee", "0xfffff", "0x00000", "0x11111", "0x22222", "0x33333", "0x44444", "0x55555", "0x66666", "0x77777", "0x88888", "0x99999"}
+	prefixes := []string{"0xaaaaa", "0xbbbbb", "0xccccc", "0xddddd", "0xeeeee", "0x00000", "0x11111", "0x22222", "0x33333", "0x44444", "0x55555", "0x66666", "0x77777", "0x88888", "0x99999"}
 	suffixes := []string{"aaaaa", "bbbbb", "ccccc", "ddddd", "eeeee", "fffff", "00000", "11111", "22222", "33333", "44444", "55555", "66666", "77777", "88888", "99999"} // No specific suffixes
 	workerCount := 8                                                                                                                                                     // Adjust based on CPU cores
 	result := make(chan string, workerCount)
@@ -87,6 +94,7 @@ func main() {
 	filePath := "results.txt"
 
 	var counter int32
+	var generatedCounter int32
 	limit := int32(100) // Stop after finding 100 addresses
 
 	// Capture start time
@@ -98,12 +106,12 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			findMatchingAddress(prefixes, suffixes, result, &counter, limit, stopChan)
+			findMatchingAddress(prefixes, suffixes, result, &counter, &generatedCounter, limit, stopChan)
 		}()
 	}
 
 	// Start the status ticker in a separate goroutine
-	go printStatus(startTime, &counter)
+	go printStatus(startTime, &counter, &generatedCounter)
 
 	// Write results to file
 	go func() {
