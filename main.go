@@ -86,8 +86,8 @@ func printStatus(startTime time.Time, counter *int32, generatedCounter *int32) {
 }
 
 func main() {
-	prefixes := []string{"0xaaaaa", "0xbbbbb", "0xccccc", "0xddddd", "0xeeeee", "0x00000", "0x11111", "0x22222", "0x33333", "0x44444", "0x55555", "0x66666", "0x77777", "0x88888", "0x99999"}
-	suffixes := []string{"aaaaa", "bbbbb", "ccccc", "ddddd", "eeeee", "fffff", "00000", "11111", "22222", "33333", "44444", "55555", "66666", "77777", "88888", "99999"} // No specific suffixes
+	prefixes := []string{"0xaaaa", "0xbbbb", "0xcccc", "0xdddd", "0xeeee", "0x0000", "0x1111", "0x2222", "0x3333", "0x4444", "0x5555", "0x6666", "0x7777", "0x8888", "0x9999", "0xace"}
+	suffixes := []string{"aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff", "0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "ace"} // No specific suffixes
 	workerCount := 8                                                                                                                                                     // Adjust based on CPU cores
 	result := make(chan string, workerCount)
 	stopChan := make(chan struct{})
