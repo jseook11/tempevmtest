@@ -15,7 +15,7 @@ import (
 )
 
 func generatePrivateKeyBase() string {
-	bytes := make([]byte, 31) // 31 bytes for the base key
+	bytes := make([]byte, 32) // 31 bytes for the base key
 	_, err := rand.Read(bytes)
 	if err != nil {
 		log.Fatal(err)
@@ -26,8 +26,11 @@ func generatePrivateKeyBase() string {
 func generateModifiedKeys(baseKey string) []string {
 	suffixes := []string{"a", "b", "c", "d", "e", "f", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 	var keys []string
+	baseKeyWithoutLast := baseKey[:len(baseKey)-1]
+
+	// Replace the last character with each valid suffix
 	for _, suffix := range suffixes {
-		keys = append(keys, baseKey+suffix)
+		keys = append(keys, baseKeyWithoutLast+suffix)
 	}
 	return keys
 }
